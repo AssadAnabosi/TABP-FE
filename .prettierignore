@@ -1,0 +1,5 @@
+dist
+node_modules
+bun.lock
+FRONTEND-KICKOFF.md
+src/components/ui
