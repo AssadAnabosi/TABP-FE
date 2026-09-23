@@ -1,5 +1,11 @@
 // Centralized TanStack Query keys (kickoff §13.1). Invalidate by prefix, e.g. queryKeys.cities.all.
-import type { AdminHotelListParams, HotelSearchParams, IsoDate } from './types'
+import type {
+  AdminHotelListParams,
+  HotelBookingParams,
+  HotelSearchParams,
+  IsoDate,
+  PageParams,
+} from './types'
 
 export const queryKeys = {
   hotels: {
@@ -10,6 +16,8 @@ export const queryKeys = {
       ['hotels', 'detail', id, checkIn, checkOut] as const,
     adminList: (params: AdminHotelListParams) => ['hotels', 'admin-list', params] as const,
     manage: (id: number) => ['hotels', 'manage', id] as const,
+    mine: (page: PageParams) => ['hotels', 'mine', page] as const,
+    images: (id: number) => ['hotels', 'images', id] as const,
   },
   visits: {
     recentlyVisited: ['visits', 'recently-visited'] as const,
@@ -22,6 +30,8 @@ export const queryKeys = {
     all: ['bookings'] as const,
     mine: (pageNumber: number) => ['bookings', 'mine', pageNumber] as const,
     detail: (id: string) => ['bookings', 'detail', id] as const,
+    byHotel: (hotelId: number, params: HotelBookingParams) =>
+      ['bookings', 'by-hotel', hotelId, params] as const,
   },
   cities: {
     all: ['cities'] as const,
@@ -32,9 +42,16 @@ export const queryKeys = {
   rooms: {
     all: ['rooms'] as const,
     byHotel: (hotelId: number) => ['rooms', 'by-hotel', hotelId] as const,
+    images: (id: number) => ['rooms', 'images', id] as const,
   },
   users: {
+    all: ['users'] as const,
     hotelOwners: ['users', 'hotel-owners'] as const,
+    list: (params: object) => ['users', 'list', params] as const,
+    detail: (id: string) => ['users', 'detail', id] as const,
+  },
+  discounts: {
+    byRoom: (roomId: number) => ['discounts', 'by-room', roomId] as const,
   },
   attractions: (lat: number, lng: number) => ['attractions', lat, lng] as const,
 }

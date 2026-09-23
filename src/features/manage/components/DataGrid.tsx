@@ -31,6 +31,8 @@ interface DataGridProps<T> {
   onRetry?: () => void
   onRowClick?: (row: T) => void
   rowLabel?: (row: T) => string
+  /** Verb for the row click in the accessible name, e.g. "Open" (default "Edit"). */
+  rowActionLabel?: string
   emptyMessage?: string
   /** Server paging when the endpoint is paged; otherwise the grid pages client-side. */
   serverPagination?: ServerPagination
@@ -46,6 +48,7 @@ export function DataGrid<T>({
   onRetry,
   onRowClick,
   rowLabel,
+  rowActionLabel = 'Edit',
   emptyMessage = 'Nothing here yet.',
   serverPagination,
   pageSize = 20,
@@ -146,7 +149,9 @@ export function DataGrid<T>({
                 <TableRow
                   key={row.id}
                   tabIndex={onRowClick ? 0 : undefined}
-                  aria-label={onRowClick && rowLabel ? `Edit ${rowLabel(row.original)}` : undefined}
+                  aria-label={
+                    onRowClick && rowLabel ? `${rowActionLabel} ${rowLabel(row.original)}` : undefined
+                  }
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                   onKeyDown={
                     onRowClick

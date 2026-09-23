@@ -22,6 +22,11 @@ export interface RequestOptions {
   signal?: AbortSignal
   /** Attach the Bearer token and refresh on 401 (default true). */
   auth?: boolean
+  /**
+   * Set false when a 401 means "wrong credentials" rather than "token expired" (e.g. a wrong current
+   * password), so it isn't answered with a refresh + retry.
+   */
+  refreshOn401?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +146,12 @@ async function sendWithRefresh(path: string, options: RequestOptions): Promise<R
   const hadToken = options.auth !== false && accessToken !== null
   let response = await send(path, options)
 
-  if (response.status === 401 && hadToken && !path.startsWith('/api/auth')) {
+  if (
+    response.status === 401 &&
+    hadToken &&
+    options.refreshOn401 !== false &&
+    !path.startsWith('/api/auth')
+  ) {
     const refreshed = await refreshSession()
     if (refreshed) response = await send(path, options)
   }

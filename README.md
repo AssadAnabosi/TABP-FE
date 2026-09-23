@@ -20,7 +20,7 @@ Answers to the kickoff's §2 stack questions (2026-09-23).
 | Q10 | Map | **Leaflet + OpenStreetMap** tiles. Nearby attractions from the **Overpass API** (client-side) |
 | Q11 | Date picker | shadcn Calendar (react-day-picker) + date-fns |
 | Q12 | Payment | **Mocked card form**. Only an opaque `tok_mock_<last4>` is sent; card data never leaves the browser |
-| Q13 | Scope | Brief only: Customer + Admin (HotelOwner accounts browse as customers) |
+| Q13 | Scope | Customer + Admin + **HotelOwner portal**, plus reviews, account settings, approvals, discounts, availability blocks, amenities, users and check-in/out |
 | Q14 | Tests | **Skipped** for now, by request |
 | Q15 | Package manager | **bun** |
 | Q16 | Lint/format | ESLint (typescript-eslint, react-hooks, react-refresh) + Prettier (+ Tailwind class sorting) |
@@ -60,7 +60,7 @@ src/
   auth/       session store (boot refresh, login/logout, multi-tab logout), route guards
   cart/       client-side cart (localStorage) + header drawer
   components/ shared UI (ui/ = shadcn primitives), date/guest pickers, status pages, map setup
-  features/   home, search, hotel, checkout, bookings, auth, admin (lazy-loaded)
+  features/   home, search, hotel, checkout, bookings, auth, account, manage (lazy-loaded; Admin + HotelOwner)
   lib/        dates, money, logger, forms, theme, query client
 ```
 
@@ -68,6 +68,21 @@ src/
 - **Errors:** every non-2xx becomes an `ApiError` (camelCased field errors, `traceId`). Forms show errors inline; other mutations get a toast. Routes have error boundaries. `lib/logger.ts` is the logging seam and never receives tokens or card data.
 - **Search state** lives in the URL. Home → search → hotel carries dates and guests along.
 - **Checkout** books each cart item in sequence (create → confirm). A failed payment keeps the Pending booking id, so a retry only confirms. Pending bookings can also be paid from *My bookings* or the confirmation page.
+
+## Roles
+
+| Area | Customer | Hotel owner | Admin |
+|---|:-:|:-:|:-:|
+| Search, book, pay, my bookings, account | ✅ | ✅ | ✅ |
+| Write/edit/delete own reviews (after a checked-out stay) | ✅ | ✅ | ✅ (and delete any) |
+| `/manage` → Hotels (own) + create (→ Pending), amenities, images | | ✅ | ✅ (all hotels, approve/reject, reassign owner, delete) |
+| `/manage` → Rooms (own hotels): capacities, discounts, blocked dates | | ✅ (discounts: owner only) | ✅ (discounts read-only) |
+| `/manage` → Amenities catalogue | | ✅ | ✅ |
+| `/manage` → Cities, Users (role, activate/deactivate) | | | ✅ |
+| `/manage` → Bookings: a hotel's bookings (status, check-in range, keyword) with check in / check out | | ✅ (own hotels) | ✅ |
+| Room and hotel images: list, add by URL, remove | | ✅ (own hotels) | ✅ |
+
+`/admin/*` links redirect to `/manage/*`.
 
 ## Known API limitations and FE workarounds
 
@@ -80,7 +95,11 @@ From kickoff §9. Each workaround is marked in code with its gap id.
 | G4 no room description / original price | Description built from type + capacity; only `pricePerNight` shown |
 | ~~G5 no admin "list hotels"~~ | **Resolved:** `GET /api/hotels` (Admin, paged, `keyword`/`approvalStatus` filters) |
 | ~~G7 owner not updatable~~ | **Resolved:** `PUT /api/hotels/{id}/owner`, called from the update form only when the owner changes |
-| G8 no room availability data | The Rooms grid shows `isActive` |
+| G8 no room availability data | The Rooms grid shows `isActive`. Blocked dates can be created and undone in the same session, but existing blocks can't be listed (booked dates are visible on the Bookings page) |
+| G6 amenities of unapproved hotels | Current amenities are read from the public detail, so they can't be shown until the hotel is approved (saving still replaces the set) |
+| ~~No room-image endpoint~~ | **Resolved:** `GET/POST /api/rooms/{id}/images`, `DELETE …/images/{imageId}` (Images tab in the room sheet) |
+| ~~No hotel image ids~~ | **Resolved:** `GET /api/hotels/{id}/images` (any approval state) + delete |
+| ~~No bookings-by-hotel listing~~ | **Resolved:** `GET /api/hotels/{id}/bookings` powers the Bookings page. Room numbers arrive raw (soft-deleted rooms carry a `::deleted::` suffix), so the FE strips it |
 | G9 room number immutable | Read-only in the room update form (so are type, price, currency) |
 | G11 `rooms` search param unused | Passed through, with a hint in the guest picker |
 | G12 no guest fields on bookings | Prefilled from the profile; optional "save name to profile" |

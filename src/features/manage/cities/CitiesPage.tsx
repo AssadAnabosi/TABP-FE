@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { HotelImage } from '@/components/HotelImage'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
-import { AdminPageHeader } from '../components/AdminPageHeader'
+import { ManagePageHeader } from '../components/ManagePageHeader'
 import { deleteColumn, timestampColumns } from '../components/columns'
 import { DataGrid } from '../components/DataGrid'
 import { CityFormDialog } from './CityFormDialog'
@@ -79,7 +79,7 @@ export function CitiesPage() {
 
   return (
     <>
-      <AdminPageHeader
+      <ManagePageHeader
         title="Cities"
         search={search}
         onSearchChange={(value) => {

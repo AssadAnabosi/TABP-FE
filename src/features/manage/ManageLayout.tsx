@@ -1,29 +1,17 @@
-import {
-  BedDouble,
-  Building2,
-  ChevronsLeft,
-  ChevronsRight,
-  Hotel,
-  Menu,
-  MapPinned,
-  type LucideIcon,
-} from 'lucide-react'
+import { Building2, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 
+import { useSession } from '@/auth/session'
 import { AppHeader } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-const NAV: Array<{ to: string; label: string; icon: LucideIcon }> = [
-  { to: '/admin/cities', label: 'Cities', icon: MapPinned },
-  { to: '/admin/hotels', label: 'Hotels', icon: Hotel },
-  { to: '/admin/rooms', label: 'Rooms', icon: BedDouble },
-]
+import { navFor } from './nav'
 
-const COLLAPSED_KEY = 'tabp.admin.navCollapsed'
+const COLLAPSED_KEY = 'tabp.manage.navCollapsed'
 
 function readCollapsed(): boolean {
   try {
@@ -34,13 +22,14 @@ function readCollapsed(): boolean {
 }
 
 function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const role = useSession((s) => s.user?.role)
   return (
-    <nav aria-label="Admin" className="grid gap-1">
-      {NAV.map(({ to, label, icon: Icon }) => {
+    <nav aria-label="Management" className="grid gap-1">
+      {navFor(role).map(({ path, label, icon: Icon }) => {
         const link = (
           <NavLink
-            key={to}
-            to={to}
+            key={path}
+            to={`/manage/${path}`}
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
@@ -57,7 +46,7 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
           </NavLink>
         )
         return collapsed ? (
-          <Tooltip key={to}>
+          <Tooltip key={path}>
             <TooltipTrigger asChild>{link}</TooltipTrigger>
             <TooltipContent side="right">{label}</TooltipContent>
           </Tooltip>
@@ -69,8 +58,13 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
   )
 }
 
-/** Admin shell: collapsible left navigator (icons-only when collapsed, persisted), overlay drawer on mobile (brief 6.1). */
-export default function AdminLayout() {
+/**
+ * Management shell for Admins and HotelOwners: collapsible left navigator (icons-only when collapsed,
+ * persisted), overlay drawer on mobile (brief 6.1).
+ */
+export default function ManageLayout() {
+  const role = useSession((s) => s.user?.role)
+  const title = role === 'Admin' ? 'Administration' : 'My properties'
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -94,10 +88,10 @@ export default function AdminLayout() {
         >
           {!collapsed && (
             <Link
-              to="/admin"
+              to="/manage"
               className="mb-3 flex items-center gap-2 px-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
             >
-              <Building2 className="size-3.5" aria-hidden /> Administration
+              <Building2 className="size-3.5" aria-hidden /> {title}
             </Link>
           )}
           <NavLinks collapsed={collapsed} />
@@ -124,12 +118,12 @@ export default function AdminLayout() {
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Menu /> Admin menu
+                  <Menu /> Menu
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
                 <SheetHeader>
-                  <SheetTitle>Administration</SheetTitle>
+                  <SheetTitle>{title}</SheetTitle>
                 </SheetHeader>
                 <div className="px-3">
                   <NavLinks collapsed={false} onNavigate={() => setMobileOpen(false)} />

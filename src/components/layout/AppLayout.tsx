@@ -1,7 +1,9 @@
-import { BedDouble, LayoutDashboard, LogOut, Moon, Receipt, Sun, User } from 'lucide-react'
+import { BedDouble, LayoutDashboard, LogOut, Moon, Receipt, Sun, User, UserCog } from 'lucide-react'
 import { Link, NavLink, Outlet, ScrollRestoration, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 
-import { logout, useSession } from '@/auth/session'
+import { isApiError } from '@/api/errors'
+import { hasRole, logout, useSession } from '@/auth/session'
 import { CartSheet } from '@/cart/CartSheet'
 import { Button } from '@/components/ui/button'
 import {
@@ -60,16 +62,27 @@ function UserMenu() {
         <DropdownMenuItem onSelect={() => navigate('/bookings')}>
           <Receipt /> My bookings
         </DropdownMenuItem>
-        {user.role === 'Admin' && (
-          <DropdownMenuItem onSelect={() => navigate('/admin')}>
-            <LayoutDashboard /> Admin
+        <DropdownMenuItem onSelect={() => navigate('/account')}>
+          <UserCog /> Account
+        </DropdownMenuItem>
+        {hasRole(user, ['Admin', 'HotelOwner']) && (
+          <DropdownMenuItem onSelect={() => navigate('/manage')}>
+            <LayoutDashboard /> {manageLabel(user.role)}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={async () => {
-            await logout()
-            navigate('/')
+            try {
+              await logout()
+              navigate('/')
+            } catch (error) {
+              toast.error(
+                isApiError(error) && error.status === 429
+                  ? "Couldn't sign you out: too many requests. Please try again in a minute."
+                  : "Couldn't sign you out. Please try again.",
+              )
+            }
           }}
         >
           <LogOut /> Log out
@@ -79,8 +92,12 @@ function UserMenu() {
   )
 }
 
+function manageLabel(role: string): string {
+  return role === 'Admin' ? 'Admin' : 'My properties'
+}
+
 export function AppHeader() {
-  const role = useSession((s) => s.user?.role)
+  const user = useSession((s) => s.user)
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur print:hidden">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4">
@@ -88,9 +105,9 @@ export function AppHeader() {
           <BedDouble className="size-5 text-primary" aria-hidden />
           <span>TABP Stays</span>
         </Link>
-        {role === 'Admin' && (
+        {user && hasRole(user, ['Admin', 'HotelOwner']) && (
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-            <NavLink to="/admin">Admin</NavLink>
+            <NavLink to="/manage">{manageLabel(user.role)}</NavLink>
           </Button>
         )}
         <ThemeToggle />

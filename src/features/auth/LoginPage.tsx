@@ -23,6 +23,7 @@ type Values = z.infer<typeof schema>
 
 const DEMO_ACCOUNTS = [
   { label: 'Customer', email: 'customer@tabp.dev' },
+  { label: 'Hotel owner', email: 'owner@tabp.dev' },
   { label: 'Admin', email: 'admin@tabp.dev' },
 ]
 

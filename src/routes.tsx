@@ -11,8 +11,11 @@ import { CheckoutPage } from '@/features/checkout/CheckoutPage'
 import { HomePage } from '@/features/home/HomePage'
 import { HotelPage } from '@/features/hotel/HotelPage'
 import { SearchPage } from '@/features/search/SearchPage'
+import { AccountPage } from '@/features/account/AccountPage'
+import { MANAGE_ROLES } from '@/features/manage/nav'
+import { LegacyAdminRedirect, ManageIndex } from '@/features/manage/redirects'
 
-// Route map: kickoff §7. The admin area is lazy-loaded so customers never download it (kickoff §6).
+// Route map: kickoff §7. The management area is lazy-loaded so customers never download it (kickoff §6).
 export const router = createBrowserRouter([
   {
     element: <AppLayout />,
@@ -67,43 +70,80 @@ export const router = createBrowserRouter([
               </RequireAuth>
             ),
           },
+          {
+            path: 'account',
+            element: (
+              <RequireAuth>
+                <AccountPage />
+              </RequireAuth>
+            ),
+          },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],
   },
+  // Management area for Admins and HotelOwners; pages the role can't use are guarded individually.
   {
-    path: 'admin',
+    path: 'manage',
     element: (
-      <RequireRole roles={['Admin']}>
+      <RequireRole roles={MANAGE_ROLES}>
         <Outlet />
       </RequireRole>
     ),
     errorElement: <RouteErrorPage />,
     children: [
       {
-        lazy: async () => ({ Component: (await import('@/features/admin/AdminLayout')).default }),
+        lazy: async () => ({ Component: (await import('@/features/manage/ManageLayout')).default }),
         children: [
-          { index: true, element: <Navigate to="cities" replace /> },
-          {
-            path: 'cities',
-            lazy: async () => ({
-              Component: (await import('@/features/admin/cities/CitiesPage')).CitiesPage,
-            }),
-          },
+          { index: true, element: <ManageIndex /> },
           {
             path: 'hotels',
             lazy: async () => ({
-              Component: (await import('@/features/admin/hotels/HotelsPage')).HotelsPage,
+              Component: (await import('@/features/manage/hotels/HotelsPage')).HotelsPage,
             }),
           },
           {
             path: 'rooms',
-            lazy: async () => ({ Component: (await import('@/features/admin/rooms/RoomsPage')).RoomsPage }),
+            lazy: async () => ({ Component: (await import('@/features/manage/rooms/RoomsPage')).RoomsPage }),
+          },
+          {
+            path: 'bookings',
+            lazy: async () => ({
+              Component: (await import('@/features/manage/bookings/BookingsPage')).BookingsPage,
+            }),
+          },
+          {
+            path: 'amenities',
+            lazy: async () => ({
+              Component: (await import('@/features/manage/amenities/AmenitiesPage')).AmenitiesPage,
+            }),
+          },
+          {
+            element: (
+              <RequireRole roles={['Admin']}>
+                <Outlet />
+              </RequireRole>
+            ),
+            children: [
+              {
+                path: 'cities',
+                lazy: async () => ({
+                  Component: (await import('@/features/manage/cities/CitiesPage')).CitiesPage,
+                }),
+              },
+              {
+                path: 'users',
+                lazy: async () => ({
+                  Component: (await import('@/features/manage/users/UsersPage')).UsersPage,
+                }),
+              },
+            ],
           },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],
   },
+  { path: 'admin/*', element: <LegacyAdminRedirect /> },
 ])

@@ -6,7 +6,7 @@ import { Link, useParams } from 'react-router'
 import { bookingsApi } from '@/api/bookings'
 import { isApiError } from '@/api/errors'
 import { queryKeys } from '@/api/queryKeys'
-import { useSession } from '@/auth/session'
+import { hasRole, useSession } from '@/auth/session'
 import { ErrorState, ForbiddenPage, NotFoundPage } from '@/components/StatusPages'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { formatMoney } from '@/lib/money'
 
 import { PayDialog } from '../checkout/PayDialog'
 import { BookingStatusBadge } from './BookingStatusBadge'
+import { FrontDeskPanel } from './FrontDeskPanel'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -45,7 +46,9 @@ async function downloadPdf(bookingId: string, confirmationNumber: string) {
 
 export function ConfirmationPage() {
   const bookingId = useParams().bookingId!
-  const email = useSession((s) => s.user?.email)
+  const user = useSession((s) => s.user)
+  // Staff may be viewing a guest's booking; the DTO doesn't say who booked it.
+  const isStaff = hasRole(user, ['Admin', 'HotelOwner'])
   const [payOpen, setPayOpen] = useState(false)
   const booking = useQuery({
     queryKey: queryKeys.bookings.detail(bookingId),
@@ -70,6 +73,14 @@ export function ConfirmationPage() {
 
   const b = booking.data
   const isPending = b.status === 'Pending'
+  const isCancelled = b.status === 'Cancelled'
+  const heading = {
+    Pending: { eyebrow: 'Reservation', title: 'Your room is reserved' },
+    Confirmed: { eyebrow: 'Booking confirmed', title: 'Thanks, your stay is booked!' },
+    CheckedIn: { eyebrow: 'Checked in', title: 'Enjoy your stay!' },
+    CheckedOut: { eyebrow: 'Stay complete', title: 'Thanks for staying with us!' },
+    Cancelled: { eyebrow: 'Booking', title: 'This booking was cancelled' },
+  }[b.status]
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-10 print:max-w-none print:p-0">
@@ -80,13 +91,11 @@ export function ConfirmationPage() {
       </Button>
 
       <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">{isPending ? 'Reservation' : 'Booking confirmed'}</p>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {isPending ? 'Your room is reserved' : 'Thanks, your stay is booked!'}
-        </h1>
+        <p className="text-sm text-muted-foreground">{heading.eyebrow}</p>
+        <h1 className="text-2xl font-bold tracking-tight">{heading.title}</h1>
       </div>
 
-      {isPending ? (
+      {isCancelled ? null : isPending ? (
         <Alert className="print:hidden">
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
             <span>Payment hasn't been completed yet. The room stays held for you.</span>
@@ -99,7 +108,14 @@ export function ConfirmationPage() {
         <Alert className="print:hidden">
           <Mail aria-hidden />
           <AlertDescription>
-            A confirmation with your invoice has been sent to <strong>{email ?? 'your email'}</strong>.
+            {isStaff ? (
+              <>A confirmation with the invoice was emailed to the guest.</>
+            ) : (
+              <>
+                A confirmation with your invoice has been sent to{' '}
+                <strong>{user?.email ?? 'your email'}</strong>.
+              </>
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -142,10 +158,16 @@ export function ConfirmationPage() {
         <Button variant="outline" onClick={() => window.print()}>
           <Printer /> Print
         </Button>
-        <Button variant="outline" onClick={() => pdf.mutate()} disabled={pdf.isPending || isPending}>
+        <Button
+          variant="outline"
+          onClick={() => pdf.mutate()}
+          disabled={pdf.isPending || isPending || isCancelled}
+        >
           <Download /> {pdf.isPending ? 'Preparing PDF…' : 'Save as PDF'}
         </Button>
       </div>
+
+      {isStaff && <FrontDeskPanel booking={b} />}
 
       {isPending && (
         <PayDialog

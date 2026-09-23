@@ -70,15 +70,21 @@ export async function register(body: RegisterRequest): Promise<SessionUser> {
   return toUser(result)
 }
 
+/**
+ * Signs out. Throws (and keeps the session) if the server couldn't revoke the refresh cookie, e.g. a 429
+ * from the auth rate limiter: clearing only locally would let the next page load silently sign back in.
+ */
 export async function logout(): Promise<void> {
-  try {
-    await authApi.logout()
-  } catch {
-    // Logout never fails for a missing cookie; any other error still ends the local session.
-  }
+  await authApi.logout() // never fails for a missing cookie
   applyAuthResult(null)
   queryClient.clear()
   channel?.postMessage('logout')
+}
+
+/** Mirrors a profile edit into the session (the name shown in the header). */
+export function updateSessionUser(patch: Partial<Pick<SessionUser, 'firstName' | 'lastName'>>) {
+  const user = useSession.getState().user
+  if (user) useSession.setState({ user: { ...user, ...patch } })
 }
 
 export function hasRole(user: SessionUser | null, roles: UserRole[]): boolean {

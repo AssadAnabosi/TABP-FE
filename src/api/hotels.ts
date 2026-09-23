@@ -7,6 +7,7 @@ import type {
   HotelDto,
   HotelSearchParams,
   HotelSearchResultDto,
+  ImageDto,
   IsoDate,
   PageParams,
   Paged,
@@ -23,6 +24,9 @@ export const hotelsApi = {
   /** Admin: every hotel in any approval state (pageSize <= 50). */
   list: (params: AdminHotelListParams, signal?: AbortSignal) =>
     api.get<Paged<HotelDto>>('/api/hotels', { ...params }, signal),
+  /** HotelOwner: their own hotels in any approval state. */
+  mine: (page: PageParams, signal?: AbortSignal) =>
+    api.get<Paged<HotelDto>>('/api/hotels/mine', { ...page }, signal),
   pending: (page: PageParams) => api.get<Paged<HotelDto>>('/api/hotels/pending', { ...page }),
   manage: (id: number) => api.get<HotelDto>(`/api/hotels/${id}/manage`),
   create: (body: CreateHotelRequest) => api.post<HotelDto>('/api/hotels', body),
@@ -34,5 +38,8 @@ export const hotelsApi = {
   reject: (id: number, reason: string) => api.post<void>(`/api/hotels/${id}/reject`, { reason }),
   setAmenities: (id: number, amenityIds: number[]) =>
     api.put<void>(`/api/hotels/${id}/amenities`, { amenityIds }),
+  /** Any approval state, ordered, with ids for removal. Admin or the hotel's owner. */
+  images: (id: number) => api.get<ImageDto[]>(`/api/hotels/${id}/images`),
   addImage: (id: number, url: string) => api.post<{ imageId: number }>(`/api/hotels/${id}/images`, { url }),
+  removeImage: (id: number, imageId: number) => api.delete(`/api/hotels/${id}/images/${imageId}`),
 }

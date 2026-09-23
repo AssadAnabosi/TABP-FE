@@ -10,7 +10,14 @@ export type UserRole = 'Customer' | 'HotelOwner' | 'Admin'
 export type RoomType = 'Standard' | 'Budget' | 'Deluxe' | 'Suite' | 'Luxury' | 'Boutique'
 export type DiscountType = 'Percentage' | 'FixedAmount'
 export type HotelApprovalStatus = 'Pending' | 'Approved' | 'Rejected'
-export type BookingStatus = 'Pending' | 'Confirmed' | 'CheckedIn' | 'CheckedOut'
+export type BookingStatus = 'Pending' | 'Confirmed' | 'CheckedIn' | 'CheckedOut' | 'Cancelled'
+export const BOOKING_STATUSES: BookingStatus[] = [
+  'Pending',
+  'Confirmed',
+  'CheckedIn',
+  'CheckedOut',
+  'Cancelled',
+]
 
 export const ROOM_TYPES: RoomType[] = ['Standard', 'Budget', 'Deluxe', 'Suite', 'Luxury', 'Boutique']
 
@@ -71,6 +78,16 @@ export interface UserListItemDto {
   role: UserRole
   isActive: boolean
   createdAt: IsoDateTime
+}
+
+export interface UserDetailsDto extends UserListItemDto {
+  modifiedAt: IsoDateTime | null
+  ownedHotelsCount: number
+  bookingsCount: number
+}
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
 }
 
 // ---------- cities / amenities ----------
@@ -195,6 +212,13 @@ export interface AdminHotelListParams extends PageParams {
   ownerId?: Guid
 }
 
+/** A gallery image with the id needed to remove it (hotels and rooms). */
+export interface ImageDto {
+  id: number
+  url: string
+  displayOrder: number
+}
+
 // ---------- visits ----------
 export interface RecentlyVisitedDto {
   hotelId: number
@@ -239,6 +263,33 @@ export interface UpdateRoomRequest {
   adultCapacity: number
   childCapacity: number
 }
+export interface BlockDatesRequest {
+  startDate: IsoDate
+  endDate: IsoDate
+}
+
+// ---------- discounts ----------
+export const DISCOUNT_TYPES: DiscountType[] = ['Percentage', 'FixedAmount']
+export interface DiscountDto {
+  id: number
+  roomId: number
+  name: string
+  type: DiscountType
+  value: number
+  startDate: IsoDate
+  endDate: IsoDate
+  isActive: boolean
+  createdAt: IsoDateTime
+  modifiedAt: IsoDateTime | null
+}
+export interface DiscountRequest {
+  name: string
+  type: DiscountType
+  /** Percentage: 0 < value <= 100. FixedAmount: value > 0 (room currency). */
+  value: number
+  startDate: IsoDate
+  endDate: IsoDate
+}
 
 // ---------- reviews ----------
 export interface ReviewDto {
@@ -250,6 +301,11 @@ export interface ReviewDto {
   comment: string | null
   createdAt: IsoDateTime
   modifiedAt: IsoDateTime | null
+}
+
+export interface ReviewRequest {
+  rating: number
+  comment: string | null
 }
 
 // ---------- bookings ----------
@@ -290,6 +346,33 @@ export interface BookingListItemDto {
   status: BookingStatus
   totalPrice: number
   currency: string
+}
+/** Filters for GET /api/hotels/{id}/bookings. Check-in dates are inclusive on both ends. */
+export interface HotelBookingParams extends PageParams {
+  status?: BookingStatus
+  checkInFrom?: IsoDate
+  checkInTo?: IsoDate
+  /** Matches confirmation number, guest email, first name or last name. */
+  keyword?: string
+}
+export interface HotelBookingListItemDto {
+  id: Guid
+  confirmationNumber: string
+  guestId: Guid
+  guestName: string
+  guestEmail: string
+  roomId: number
+  /** Raw: a soft-deleted room carries a "::deleted::<guid>" suffix. */
+  roomNumber: string
+  checkIn: IsoDate
+  checkOut: IsoDate
+  adults: number
+  children: number
+  status: BookingStatus
+  totalPrice: number
+  currency: string
+  specialRequests: string | null
+  createdAt: IsoDateTime
 }
 export interface BookingDetailDto {
   id: Guid

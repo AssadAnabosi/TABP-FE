@@ -6,10 +6,18 @@ const LABELS: Record<BookingStatus, string> = {
   Confirmed: 'Confirmed',
   CheckedIn: 'Checked in',
   CheckedOut: 'Checked out',
+  Cancelled: 'Cancelled',
 }
 
 export function BookingStatusBadge({ status }: { status: BookingStatus }) {
-  const variant = status === 'Pending' ? 'outline' : status === 'Confirmed' ? 'default' : 'secondary'
+  const variant =
+    status === 'Pending'
+      ? 'outline'
+      : status === 'Confirmed'
+        ? 'default'
+        : status === 'Cancelled'
+          ? 'destructive'
+          : 'secondary'
   return (
     <Badge
       variant={variant}

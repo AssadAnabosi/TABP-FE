@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { applyServerErrors, fieldA11y } from '@/lib/forms'
+import { isHttpUrl } from '@/lib/urls'
 
 // Mirrors the backend City validator (kickoff §12).
 const schema = z.object({
@@ -39,15 +40,6 @@ const schema = z.object({
 type Input = z.input<typeof schema>
 type Values = z.output<typeof schema>
 const FIELDS = ['name', 'country', 'postOffice', 'thumbnailUrl'] as const
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
 
 interface CityFormDialogProps {
   /** null = create. */
