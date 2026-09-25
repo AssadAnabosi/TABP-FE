@@ -24,7 +24,7 @@ Answers to the kickoff's §2 stack questions (2026-09-23).
 | Q14 | Tests | **Skipped** for now, by request |
 | Q15 | Package manager | **bun** |
 | Q16 | Lint/format | ESLint (typescript-eslint, react-hooks, react-refresh) + Prettier (+ Tailwind class sorting) |
-| Q17 | Docker | Not yet |
+| Q17 | Docker | nginx serves the build and proxies `/api` to the backend (same origin); see *Docker* |
 | Q18 | Backend fixes | Backend added the admin hotel list (G5) and owner reassignment (G7); city thumbnails (G2) |
 | Q19 | Currency/locale | The DTO's `currency` + `Intl.NumberFormat` with the browser locale |
 | Q20 | Theme | Light/dark toggle (follows the OS until the user picks one) |
@@ -50,6 +50,33 @@ In dev, the login page has buttons that fill these in.
 | `bun run format` | Prettier |
 
 Environment (`.env.example`): `VITE_API_BASE_URL` (default empty: same origin) and `VITE_API_PROXY_TARGET` (dev proxy target).
+
+## Docker
+
+A multi-stage image: bun builds (typecheck + Vite), then nginx serves `dist/` and proxies `/api` to the
+backend. The browser sees one origin, so there's no CORS and the `SameSite=Strict` refresh cookie works.
+
+```bash
+# 1. Start the backend (in the API repo). This creates the Docker network "tabp_default".
+docker compose up -d
+# 2. Build and start the web app (this repo) → http://localhost:8081
+docker compose up --build -d
+```
+
+| Variable (compose) | Default | Purpose |
+|---|---|---|
+| `WEB_PORT` | `8081` | Host port for the web app |
+| `API_UPSTREAM` | `http://api:8080` | Where nginx forwards `/api`; resolved per request, so the API can restart independently |
+| `BACKEND_NETWORK` | `tabp_default` | The backend's Docker network to join |
+
+nginx also sets a Content-Security-Policy (scripts from this origin only; images over https for
+admin-added URLs and map tiles; XHR to the API and Overpass), a year-long cache for hashed `/assets/`,
+`no-cache` for `index.html`, and a `/healthz` endpoint for the container healthcheck.
+
+> **Known backend issue:** the API rate-limits by client IP but doesn't trust `X-Forwarded-For` from the
+> proxy (`ForwardedHeadersOptions` has no `KnownNetworks`/`KnownProxies`), so everyone behind this
+> container shares one bucket (10 auth requests per minute in total). Harmless for local use; fix it in
+> the API before any shared deployment.
 
 ## How it's put together
 

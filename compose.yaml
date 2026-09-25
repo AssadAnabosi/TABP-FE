@@ -1,0 +1,19 @@
+# The web app joins the backend's Docker network and proxies /api to its `api` service.
+# Start the backend first (its compose.yaml, project "tabp"), then: docker compose up --build -d
+services:
+  web:
+    image: tabp-web
+    build:
+      context: .
+    environment:
+      - API_UPSTREAM=${API_UPSTREAM:-http://api:8080}
+    ports:
+      - "${WEB_PORT:-8081}:80"
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    external: true
+    name: ${BACKEND_NETWORK:-tabp_default}
