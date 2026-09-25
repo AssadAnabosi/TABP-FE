@@ -96,7 +96,7 @@ From kickoff §9. Each workaround is marked in code with its gap id.
 | ~~G5 no admin "list hotels"~~ | **Resolved:** `GET /api/hotels` (Admin, paged, `keyword`/`approvalStatus` filters) |
 | ~~G7 owner not updatable~~ | **Resolved:** `PUT /api/hotels/{id}/owner`, called from the update form only when the owner changes |
 | G8 no room availability data | The Rooms grid shows `isActive`. Blocked dates can be created and undone in the same session, but existing blocks can't be listed (booked dates are visible on the Bookings page) |
-| G6 amenities of unapproved hotels | Current amenities are read from the public detail, so they can't be shown until the hotel is approved (saving still replaces the set) |
+| ~~G6 amenities of unapproved hotels~~ | **Resolved:** `HotelDto.amenityIds` prefills the Amenities tab in any approval state |
 | ~~No room-image endpoint~~ | **Resolved:** `GET/POST /api/rooms/{id}/images`, `DELETE …/images/{imageId}` (Images tab in the room sheet) |
 | ~~No hotel image ids~~ | **Resolved:** `GET /api/hotels/{id}/images` (any approval state) + delete |
 | ~~No bookings-by-hotel listing~~ | **Resolved:** `GET /api/hotels/{id}/bookings` powers the Bookings page. Room numbers arrive raw (soft-deleted rooms carry a `::deleted::` suffix), so the FE strips it |

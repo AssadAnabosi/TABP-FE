@@ -7,15 +7,19 @@ import { amenitiesApi } from '@/api/amenities'
 import { hotelsApi } from '@/api/hotels'
 import { queryKeys } from '@/api/queryKeys'
 import type { HotelDto } from '@/api/types'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import { usePublicHotel } from './usePublicHotel'
+function sameSet(a: number[], b: number[]) {
+  return a.length === b.length && a.every((id) => b.includes(id))
+}
 
-/** Replaces the hotel's whole amenity set (PUT /api/hotels/{id}/amenities). */
+/**
+ * Replaces the hotel's whole amenity set (PUT /api/hotels/{id}/amenities), starting from
+ * HotelDto.amenityIds (available in any approval state).
+ */
 export function HotelAmenitiesEditor({ hotel }: { hotel: HotelDto }) {
   const queryClient = useQueryClient()
   const amenities = useQuery({
@@ -23,28 +27,23 @@ export function HotelAmenitiesEditor({ hotel }: { hotel: HotelDto }) {
     queryFn: amenitiesApi.list,
     staleTime: 5 * 60_000,
   })
-  const detail = usePublicHotel(hotel)
-  const approved = hotel.approvalStatus === 'Approved'
 
-  // The public detail lists amenity names, not ids; map them back once both have loaded.
-  const current =
-    approved && detail.data && amenities.data
-      ? amenities.data.filter((a) => detail.data.amenities.includes(a.name)).map((a) => a.id)
-      : null
+  const current = hotel.amenityIds ?? []
   const [selected, setSelected] = useState<number[] | null>(null)
-  const effective = selected ?? current ?? []
+  const effective = selected ?? current
+  const dirty = selected !== null && !sameSet(selected, current)
 
   const save = useMutation({
     mutationFn: (ids: number[]) => hotelsApi.setAmenities(hotel.id, ids),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Amenities for ${hotel.name} saved.`)
+      // Wait for the hotel to refetch so the ticks don't flash back to the old set.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.hotels.all })
       setSelected(null)
-      void queryClient.invalidateQueries({ queryKey: queryKeys.hotels.all })
     },
   })
 
-  const loading = amenities.isPending || (approved && detail.isPending)
-  if (loading) {
+  if (amenities.isPending) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 5 }, (_, i) => (
@@ -55,19 +54,15 @@ export function HotelAmenitiesEditor({ hotel }: { hotel: HotelDto }) {
   }
   if (amenities.isError) return <p className="text-sm text-muted-foreground">Couldn't load amenities.</p>
 
+  // Functional update: several quick toggles before a re-render must all apply.
   const toggle = (id: number, on: boolean) =>
-    setSelected(on ? [...effective, id] : effective.filter((a) => a !== id))
+    setSelected((prev) => {
+      const base = prev ?? current
+      return on ? [...base.filter((a) => a !== id), id] : base.filter((a) => a !== id)
+    })
 
   return (
     <div className="space-y-4">
-      {!approved && (
-        <Alert>
-          <AlertDescription>
-            The API only exposes a hotel's current amenities once it's approved, so they can't be shown here.
-            Saving replaces the hotel's whole amenity set with what's ticked below.
-          </AlertDescription>
-        </Alert>
-      )}
       {amenities.data.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No amenities exist yet.{' '}
@@ -93,12 +88,12 @@ export function HotelAmenitiesEditor({ hotel }: { hotel: HotelDto }) {
         </div>
       )}
       <div className="flex justify-end gap-2">
-        {selected && (
+        {dirty && (
           <Button variant="outline" onClick={() => setSelected(null)}>
             Reset
           </Button>
         )}
-        <Button onClick={() => save.mutate(effective)} disabled={save.isPending || (!selected && approved)}>
+        <Button onClick={() => save.mutate(effective)} disabled={save.isPending || !dirty}>
           {save.isPending ? 'Saving…' : 'Save amenities'}
         </Button>
       </div>

@@ -190,6 +190,8 @@ export interface HotelDto {
   approvalStatus: HotelApprovalStatus
   rejectionReason: string | null
   roomsCount: number
+  /** The hotel's current amenity set, in any approval state. Nullable in the schema; treat null as none. */
+  amenityIds: number[] | null
   createdAt: IsoDateTime
   modifiedAt: IsoDateTime | null
 }
