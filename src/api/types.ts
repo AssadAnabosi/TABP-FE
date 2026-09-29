@@ -380,6 +380,7 @@ export interface BookingDetailDto {
   id: Guid
   confirmationNumber: string
   status: BookingStatus
+  hotelId: number
   hotelName: string
   hotelAddress: string
   roomNumber: string

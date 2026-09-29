@@ -6,7 +6,7 @@ import { Link, useParams } from 'react-router'
 import { bookingsApi } from '@/api/bookings'
 import { isApiError } from '@/api/errors'
 import { queryKeys } from '@/api/queryKeys'
-import { hasRole, useSession } from '@/auth/session'
+import { useSession } from '@/auth/session'
 import { ErrorState, ForbiddenPage, NotFoundPage } from '@/components/StatusPages'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { formatMoney } from '@/lib/money'
 import { PayDialog } from '../checkout/PayDialog'
 import { BookingStatusBadge } from './BookingStatusBadge'
 import { FrontDeskPanel } from './FrontDeskPanel'
+import { useIsBookingStaff } from './useIsBookingStaff'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -47,13 +48,13 @@ async function downloadPdf(bookingId: string, confirmationNumber: string) {
 export function ConfirmationPage() {
   const bookingId = useParams().bookingId!
   const user = useSession((s) => s.user)
-  // Staff may be viewing a guest's booking; the DTO doesn't say who booked it.
-  const isStaff = hasRole(user, ['Admin', 'HotelOwner'])
   const [payOpen, setPayOpen] = useState(false)
   const booking = useQuery({
     queryKey: queryKeys.bookings.detail(bookingId),
     queryFn: () => bookingsApi.detail(bookingId),
   })
+  // Admins and the owner of this booking's hotel (not any HotelOwner: owners also book as guests).
+  const isStaff = useIsBookingStaff(booking.data)
   const pdf = useMutation({ mutationFn: () => downloadPdf(bookingId, booking.data!.confirmationNumber) })
 
   if (booking.isError) {
